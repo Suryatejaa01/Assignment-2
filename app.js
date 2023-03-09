@@ -89,7 +89,7 @@ const authenticateToken = (request, response, next) => {
     });
   }
 };
-// API login
+// API login TEST CASES PASSED
 
 app.post("/login/", async (request, response) => {
   const { username, password } = request.body;
@@ -113,7 +113,7 @@ app.post("/login/", async (request, response) => {
     }
   }
 });
-// API 2
+// API /register/ NOT PASSED BUT GETTING desired response
 
 app.post("/register/", authenticateToken, async (request, response) => {
   const { username, password, name, gender } = request.body;
@@ -136,14 +136,14 @@ app.post("/register/", authenticateToken, async (request, response) => {
 
     ); `;
       await db.run(createUserQuery);
-      response.send("User Successfully Added");
+      response.send("User successfully added");
     }
   } else {
     response.status(400).send("User already exists");
   }
 });
 
-// API 3
+// API /user/tweets/feed/ TEST CASES PASSED
 
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   const getFollowingUserId = `
@@ -172,34 +172,71 @@ app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
   console.log(followingUserIds.join(","));
 });
 
-//API 4
+//API /user/following/ NOT PASSED BUT GETTING desired response
 
 app.get("/user/following/", authenticateToken, async (request, response) => {
   const loggedUserId = request.loggedUserId;
   const getFollowingUserId = `
-  SELECT following_user_id FROM follower where follower_user_id = '${loggedUserId}' `;
+  SELECT * FROM follower where follower_user_id = '${loggedUserId}' `;
   const dbResponseFollowing = await db.all(getFollowingUserId);
   const followingUserIds = dbResponseFollowing.map(
     (row) => row.following_user_id
   );
-
+  console.log(followingUserIds);
   const tweetsQuery = `
   SELECT username  FROM user
    WHERE user.user_id IN (${followingUserIds.join(",")})
      ;
   `;
   const tweetsRows = await db.all(tweetsQuery);
-  response.send(
+  response.status(200).send(
     tweetsRows.map((eachRow) => {
       return {
-        username: eachRow.username,
+        name: eachRow.username,
+      };
+    })
+  );
+});
+// API /user/followers/ NOT PASSED BUT GETTING desired response
+
+app.get("/user/followers/", authenticateToken, async (request, response) => {
+  const loggedUserId = request.loggedUserId;
+  const getFollowerUserId = `
+  SELECT follower_user_id FROM follower where following_user_id = '${loggedUserId}' `;
+  const dbResponseFollower = await db.all(getFollowerUserId);
+  const followerUserIds = dbResponseFollower.map((row) => row.follower_user_id);
+  const followerUsernameQuery = `
+    SELECT username  FROM user
+    WHERE user.user_id IN (${followerUserIds.join(",")})
+        ;
+    `;
+  const dbResponseUsername = await db.all(followerUsernameQuery);
+  response.status(200).send(
+    dbResponseUsername.map((eachRow) => {
+      return {
+        name: eachRow.username,
       };
     })
   );
 });
 
-// API 5
-
-app.get();
+// API 6 processing
+/*
+app.get("/tweets/:tweetId/:", authenticateToken, async (request, response) => {
+  const loggedUserId = request.loggedUserId;
+  const getFollowingUserId = `
+  SELECT * FROM follower where follower_user_id = '${loggedUserId}' `;
+  const dbResponseFollowing = await db.all(getFollowingUserId);
+  const followingUserIds = dbResponseFollowing.map(
+    (row) => row.following_user_id
+  );
+  const followingTLRQuery = `
+   SELECT tweet , count(like_id),count(reply_id),date_time 
+   FROM (tweet INNER JOIN like ON tweet.user_id = like.user_id) AS T INNER JOIN reply ON T.user_id = reply.user_id
+   WHERE tweet.user_id IN (${followingUserIds.join(",")}) ;
+   `;
+  const dbResponseTLR = await db.get(followingTLRQuery);
+});
+*/
 
 module.exports = app;
